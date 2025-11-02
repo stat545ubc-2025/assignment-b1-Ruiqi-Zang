@@ -1,0 +1,230 @@
+---
+title: "Assignment-B1"
+author: "Ruiqi Zang"
+date: "2025-11-01"
+output: github_document
+---
+
+Load into the library, which is include; 
+
+`tidyverse`: For data import, cleansing, visualization and modeling
+
+`roxygen2`: Automatic generation of function documentation
+
+`datateachr`: datagram
+
+`testthat`: Unit testing framework
+
+```{r}
+library(tidyverse)
+library(roxygen2)
+```
+```{r}
+library(datateachr)
+library(testthat)
+```
+
+
+## Exercise 1: Make a Function (25 points)
+## Exercise 2: Document your Function (20 points)
+
+>In this exercise, I’ll be making a function and fortifying it. 
+
+>In the same code chunk where you made your function, document the function using roxygen2 tags.
+
+When practicing with different datasets, I found by calculating the percentage of each category in a categorical variable, it is possible to visualize the distribution of that variable in the population. For example, calculating the proportion of benign versus malignant tumors in the cancer sample dataset, or calculating the proportion of different types in the game dataset. In order to perform such analyses more efficiently, I plan to write a function that takes as input a data frame and a specified categorical variable, first calculates the total number of observations in the dataset, then counts the number of observations in each category, and further calculates its proportion relative to the total, thus helping to quickly understand the distribution of different categories in the data.
+
+```{r}
+#' @title Summarize Counts and Proportions by Group
+#'
+#' @param data ; A data frame containing the data to summarize.
+#'
+#' @param group ; A string specifying the name of the categorical variable for which frequencies and proportions are to be calculated. 
+#'
+#' @param na.rm Logical; if TRUE (default), missing values (NA) are removed before counting.
+#'
+#' @return A tibble with one row per group, containing:
+#'   - The group variable
+#'   - The count of each category
+#'   - The proportion of each category relative to the total number of 
+#'     non-missing observations.
+#'
+summarize_by_group <- function(data, group, na.rm = TRUE) {
+  
+  # ---- Input validation ----
+  if (!is.data.frame(data)) {
+    stop("'data' must be a frame or tibble")
+  }
+  
+  if (!group %in% names(data)) {
+    stop(paste("Grouping variable '", group, "' not found in data", sep = ""))
+  }
+  
+  # ---- Handle missing values ----
+  if (na.rm) {
+    data <- data %>% dplyr::filter(!is.na(.data[[group]]))
+  }
+  
+  # ---- Calculate total number of observations ----
+  total_n <- nrow(data)
+  
+  # ---- Group and summarize counts and proportions ----
+  result <- data %>%
+    dplyr::group_by(.data[[group]]) %>%
+    dplyr::summarise(
+      count = dplyr::n(),
+      proportion = count / total_n,
+      .groups = "drop"
+    )
+}
+```
+
+## Exercise 3: Include examples (15 points)
+
+>Demonstrate the usage of your function with a few examples. Use one or more new code chunks, describing what you’re doing.
+
+>Note: If you want to deliberately show an error, you can use error = TRUE in your code chunk option.
+
+1. **`cancer_sample`**: Breast cancer diagnostic data
+
+Statistics about the number of benign and malignant tumors in the breast cancer dataset and the ratio.
+
+```{r}
+# Explore the cancer_sample dataset
+glimpse(cancer_sample)
+```
+
+```{r}
+# Calculating diagnosis group statistics and percentages using the `summarize_by_group()` function
+result <- summarize_by_group(cancer_sample, "diagnosis")
+
+# View Results
+print(result)
+
+```
+
+The total number of benign tumors obtained was 357, representing 62.7%, and 212 malignant tumors, representing 37.3%.
+
+
+2. **`steam_games`**: Game information on Steam platform
+
+Statistics on the number and percentage of game types in steam game data
+
+```{r}
+# Explore the steam_games dataset
+glimpse(steam_games)
+```
+
+```{r}
+# Calculating the number and proportion of types using `summarize_by_group()` function
+result <- summarize_by_group(steam_games, "types")
+
+# View Results
+print(result)
+
+```
+There are three game types, app, bundle, and sub, which account for 93.11%, 6.3%, and 0.6% respectively.
+
+
+## Exercise 4: Test the Function (25 points)
+
+>Running examples is a good way of checking by-eye whether your function is working as expected. But,
+having a formal “yes or no” check is useful when you move on to other parts of your analysis.
+
+```{r}
+library(tibble)
+```
+
+Test 1: Vector with no NA’s
+
+```{r}
+# Create a tibble for testing summarize_by_group()
+test_data1 <- tibble(
+  ID = 1:6,
+  group = c("A", "A", "B", "B", "B", "C"),
+  value = c(10, 15, 20, 25, 30, 35)
+)
+
+test_data1
+```
+
+
+```{r}
+# ---- Run test ----
+test_that("`summarize_by_group` works correctly with no NAs", {
+  
+  result <- summarize_by_group(test_data1, "group")
+  
+  # Check that returned column names are correct
+  expect_true(all(c("group", "count", "proportion") %in% names(result)))
+  
+  # Check that counts per group are correct
+  expect_equal(result$count[result$group == "A"], 2)
+  expect_equal(result$count[result$group == "B"], 3)
+  expect_equal(result$count[result$group == "C"], 1)
+  
+  # Check that proportions are correct (2/6, 3/6, 1/6)
+  expect_equal(result$proportion[result$group == "A"], 2/6)
+  expect_equal(result$proportion[result$group == "B"], 3/6)
+  expect_equal(result$proportion[result$group == "C"], 1/6)
+})
+```
+Test 2: Vector that has NA’s
+
+```{r}
+# Create a tibble for testing summarize_by_group()
+test_data2 <- tibble(
+  ID = 1:8,
+  group = c("A", "A", "B", "B", NA, "C", "C", NA),
+  value = c(10, 20, 30, 40, 50, 60, 70, 80)
+)
+
+test_data2
+```
+
+```{r}
+# ---- Run test ----
+test_that("summarize_by_group handles NA values correctly", {
+  
+  result <- summarize_by_group(test_data2, "group", na.rm = TRUE)
+  
+  # 1️⃣ Check that NA groups are excluded
+  expect_false(any(is.na(result$group)))
+  
+  # 2️⃣ Check that counts are correct (A=2, B=2, C=2; 2 NAs removed)
+  expect_equal(result$count[result$group == "A"], 2)
+  expect_equal(result$count[result$group == "B"], 2)
+  expect_equal(result$count[result$group == "C"], 2)
+  
+  # 3️⃣ Check that proportions are calculated based on non-NA groups (2/6 each)
+  expect_equal(result$proportion[result$group == "A"], 2/6)
+  expect_equal(result$proportion[result$group == "B"], 2/6)
+  expect_equal(result$proportion[result$group == "C"], 2/6)
+})
+```
+
+Test 3: Vector of length 0, like numeric(0)
+
+```{r}
+# This tibble has the correct column name 'group' but contains 0 rows.
+test_data3 <- tibble(group = character(0))
+
+test_data3
+```
+
+```{r}
+# ---- Run test ----
+test_result_empty <- test_that("summarize_by_group handles empty data correctly", {
+  
+  result <- summarize_by_group(test_data3, "group")
+  
+  # 1️⃣ Check that the result is a tibble (even if empty)
+  expect_s3_class(result, "tbl_df")
+  
+  # 2️⃣ Check that the tibble has 0 rows
+  expect_equal(nrow(result), 0)
+  
+  # 3️⃣ Check that the column names are correct
+  expect_equal(names(result), c("group", "count", "proportion"))
+})
+```
