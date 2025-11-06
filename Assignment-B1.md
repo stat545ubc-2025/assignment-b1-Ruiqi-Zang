@@ -331,15 +331,15 @@ test_that("summarize_by_group handles NA values correctly", {
   
   result <- summarize_by_group(test_data2, "group", na.rm = TRUE)
   
-  # 1️⃣ Check that NA groups are excluded
+  # Check that NA groups are excluded
   expect_false(any(is.na(result$group)))
   
-  # 2️⃣ Check that counts are correct (A=2, B=2, C=2; 2 NAs removed)
+  # Check that counts are correct (A=2, B=2, C=2; 2 NAs removed)
   expect_equal(result$count[result$group == "A"], 2)
   expect_equal(result$count[result$group == "B"], 2)
   expect_equal(result$count[result$group == "C"], 2)
   
-  # 3️⃣ Check that proportions are calculated based on non-NA groups (2/6 each)
+  # Check that proportions are calculated based on non-NA groups (2/6 each)
   expect_equal(result$proportion[result$group == "A"], 2/6)
   expect_equal(result$proportion[result$group == "B"], 2/6)
   expect_equal(result$proportion[result$group == "C"], 2/6)
@@ -366,15 +366,16 @@ test_result_empty <- test_that("summarize_by_group handles empty data correctly"
   
   result <- summarize_by_group(test_data3, "group")
   
-  # 1️⃣ Check that the result is a tibble (even if empty)
+  # Check that the result is a tibble (even if empty)
   expect_s3_class(result, "tbl_df")
   
-  # 2️⃣ Check that the tibble has 0 rows
+  # Check that the tibble has 0 rows
   expect_equal(nrow(result), 0)
   
-  # 3️⃣ Check that the column names are correct
+  # Check that the column names are correct
   expect_equal(names(result), c("group", "count", "proportion"))
 })
 ```
 
     ## Test passed 😸
+
